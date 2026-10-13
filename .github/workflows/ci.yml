@@ -1,0 +1,49 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Unit tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx ng test --watch=false
+      - run: npx ng build
+
+  e2e:
+    name: End-to-end against the real billing API
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out billing-service
+        uses: actions/checkout@v4
+        with:
+          repository: Al7assan1999/billing-service
+          path: billing-service
+      - name: Start billing-service (SQL Server + API on :5200)
+        run: docker compose -f billing-service/docker-compose.yml up -d --build --wait --wait-timeout 300
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - name: Upload report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright
+          path: |
+            playwright-report/
+            e2e/screenshots/
+      - name: API logs
+        if: failure()
+        run: docker compose -f billing-service/docker-compose.yml logs --tail 100 api
