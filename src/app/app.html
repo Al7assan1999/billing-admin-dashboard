@@ -1,0 +1,10 @@
+<nav class="sidebar" aria-label="Main">
+  <div class="brand">Billing<span>Admin</span></div>
+  @for (link of links; track link.path) {
+    <a [routerLink]="link.path" routerLinkActive="active">{{ link.label }}</a>
+  }
+</nav>
+<main class="content">
+  <router-outlet />
+</main>
+<app-toasts />
